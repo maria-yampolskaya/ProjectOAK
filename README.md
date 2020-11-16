@@ -8,6 +8,6 @@ Pokémon, a popular media franchise for all ages, features monsters organized by
 Credit: [This kaggle dataset](https://www.kaggle.com/vishalsubbiah/pokemon-images-and-types)
 
 To Do:
-- [ ] Create a co-lab notebook
+- [x] Create a co-lab notebook
 - [ ] Import data
 - [ ] Create preliminary CNN
