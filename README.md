@@ -13,3 +13,5 @@ Sorted2: also place a copy of each pokemon image into the folder for its seconda
 [Here (~1GB, first 150 pokes, repeat images)](https://www.kaggle.com/thedagger/pokemon-generation-one) is another possible dataset to use for training!  
 [Here (~70MB, 819 pokes, 256x256 images)](https://www.kaggle.com/kvpratama/pokemon-images-dataset) is another possible dataset.  
 [Here](https://medium.com/@saswatraj/gotta-catch-them-all-building-your-pokédex-using-keras-e144a83e6040) is a page that seems to show a successful neural net for identifying individual pokemon, based on the dataset above (though I am skeptical...).  
+
+[Here is a csv with more info](https://www.kaggle.com/takamasakato/pokemon-all-status-data) about the first 8 generations of pokemon, including mega evolutions and alternate forms, and other stats such as attack,speed, etc.
