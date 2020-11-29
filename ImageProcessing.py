@@ -25,29 +25,22 @@ except:
     pqol=plt
     
 import  DataProcessing as dp #ProjectOAK file with data  processing functions.
-       
+
+## custom colormaps ##
+z = np.zeros(256)
+l = np.linspace(0.0,1.0,256)
+Rcmap = colors.ListedColormap(np.array([l, z, z, z+1]).T)
+Gcmap = colors.ListedColormap(np.array([z, l, z, z+1]).T)
+Bcmap = colors.ListedColormap(np.array([z, z, l, z+1]).T)
+Acmap = colors.ListedColormap(np.array([z, z, z, l  ]).T)
+
+## get image ##       
 def get_image(pokename, folder=dp.IMAGESFOLDER, ext='.jpg'):
     '''returns image of pokemon named <pokename>.'''
     #should check if filename is abspath and ignore folder if it is.
     return mpimg.imread(os.path.join(folder, pokename+ext))
 
-def show_rgba(imgdata, figsize=(10,2), pad=0.1):
-    '''shows imgdata as true colors, then channels r, g, b, a.'''
-    z = np.zeros(256)
-    l = np.linspace(0.0,1.0,256)
-    Rcmap = colors.ListedColormap(np.array([l, z, z, z+1]).T)
-    Gcmap = colors.ListedColormap(np.array([z, l, z, z+1]).T)
-    Bcmap = colors.ListedColormap(np.array([z, z, l, z+1]).T)
-    Acmap = colors.ListedColormap(np.array([z, z, z, l  ]).T)
-    fig, axs = plt.subplots(1,5, figsize=figsize)
-    plt.sca(axs[0]); plt.imshow(imgdata)
-    plt.sca(axs[1]); plt.imshow(imgdata[:,:,0], cmap=Rcmap); pqol.colorbar()
-    plt.sca(axs[2]); plt.imshow(imgdata[:,:,1], cmap=Gcmap); pqol.colorbar()
-    plt.sca(axs[3]); plt.imshow(imgdata[:,:,2], cmap=Bcmap); pqol.colorbar()
-    plt.sca(axs[4]); plt.imshow(imgdata[:,:,3], cmap=Acmap); pqol.colorbar()
-    plt.tight_layout(pad=pad)
-
-## a few images were jpgs (only 3 channels rgb) so we convert 4-channels to 3-channels here.
+# a few images were jpgs (only 3 channels rgb) so we convert 4-channels to 3-channels here.
 def img_to_rgb(imgdata):
     '''converts imgdata to channels r, g, b.
     assumes imgdata is already rgb or has 4 channels (rgba) and has data values between 0. and 1. (inclusive).
@@ -62,16 +55,22 @@ def img_to_rgb(imgdata):
         rgbdata = imgdata
     return rgbdata
 
+## show image in true color channels ##
+def show_rgba(imgdata, figsize=(10,2), pad=0.1):
+    '''shows imgdata as true colors, then channels r, g, b, a.'''
+    fig, axs = plt.subplots(1,5, figsize=figsize)
+    plt.sca(axs[0]); plt.imshow(imgdata)
+    plt.sca(axs[1]); plt.imshow(imgdata[:,:,0], cmap=Rcmap); pqol.colorbar()
+    plt.sca(axs[2]); plt.imshow(imgdata[:,:,1], cmap=Gcmap); pqol.colorbar()
+    plt.sca(axs[3]); plt.imshow(imgdata[:,:,2], cmap=Bcmap); pqol.colorbar()
+    plt.sca(axs[4]); plt.imshow(imgdata[:,:,3], cmap=Acmap); pqol.colorbar()
+    plt.tight_layout(pad=pad)
+
 def show_rgb(imgdata, figsize=(10,2), pad=0.1):
     '''shows imgdata as true colors, then channels r, g, b.
     converts to rgb if needed.
     '''
     rgbdata = img_to_rgb(imgdata)
-    z = np.zeros(256)
-    l = np.linspace(0.0,1.0,256)
-    Rcmap = colors.ListedColormap(np.array([l, z, z, z+1]).T)
-    Gcmap = colors.ListedColormap(np.array([z, l, z, z+1]).T)
-    Bcmap = colors.ListedColormap(np.array([z, z, l, z+1]).T)
     fig, axs = plt.subplots(1,5, figsize=figsize)
     plt.sca(axs[0]); plt.imshow(rgbdata)
     plt.sca(axs[1]); plt.imshow(rgbdata[:,:,0], cmap=Rcmap); pqol.colorbar()
@@ -116,6 +115,21 @@ def save_all_as_jpgs(folder_initial, folder_jpgs):
         save_as_jpg(pokemon, allimages[pokemon], folder=folder_jpgs)
         
         
+## rescale (possibly scaled) image to fit in [0,1] 
+def rescaled(v, domain=[0,1]):
+    '''linearly rescales v (a numpy array) so its values span domain.'''
+    vm = v.min()
+    vx = v.max()
+    vW = vx - vm
+    vc = vm + vW/2.
+    W = domain[1] - domain[0]
+    c = domain[0] + W/2.
+    return (v - vc)/vW * W + c
+
+def plt_rescaled(img, **imshow_kwargs):
+    '''plots scaled img; rather than clipping values not in [0,1], makes all values fit in [0,1].'''
+    plt.imshow(rescaled(img, [0,1]), **imshow_kwargs)
+
 ### Begin working with scond image dataset (70MB) ###
 # these images tend to be named X.png with X a number (e.g. 1.png for bulbasaur)
 # or named X-qualifiers.png with qualifiers a word or set of words separated by '-' (e.g. 'mega-y' or 'winter')
@@ -125,3 +139,5 @@ def numeric_name(name):
     e.g. True for 57.jpg, False for 6-mega-x.png.
     '''
     return name.split('.')[0].isnumeric()
+
+
