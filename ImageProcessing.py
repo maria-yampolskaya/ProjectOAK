@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import os
 import time
 
+import PIL
 import matplotlib.image as mpimg #for image reading
 from matplotlib import colors    #for showing true color channels images
 
@@ -25,6 +26,13 @@ except:
     pqol=plt
     
 import  DataProcessing as dp #ProjectOAK file with data  processing functions.
+
+## Convenience functions ##
+def image_info(img, verbose=True):
+    '''prints then returns img shape, min, and max.'''
+    s, mn, mx = img.shape, img.min(), img.max()
+    if verbose: print('shape: {:}, min: {:6.2f}, max: {:6.2f}'.format(s, mn, mx))
+    return s, mn, mx
 
 ## custom colormaps ##
 z = np.zeros(256)
@@ -134,10 +142,9 @@ def plt_rescaled(img, **imshow_kwargs):
 # these images tend to be named X.png with X a number (e.g. 1.png for bulbasaur)
 # or named X-qualifiers.png with qualifiers a word or set of words separated by '-' (e.g. 'mega-y' or 'winter')
 
-def numeric_name(name):
-    '''returns whether name is like X.ext with X a number.
-    e.g. True for 57.jpg, False for 6-mega-x.png.
-    '''
-    return name.split('.')[0].isnumeric()
 
+def array_to_PIL(i):
+    '''convert i to PIL Image.'''
+    return PIL.Image.fromarray(np.uint8(rescaled(i, [0,255])))
 
+#PIL.Image.fromarray(np.uint8(ip.rescaled(im, [0,255]))).resize((256, 256))
