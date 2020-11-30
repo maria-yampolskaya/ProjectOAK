@@ -106,7 +106,8 @@ def rows_where(val, csvdata, col_val=None):
 
 def poke_to_N(poke, csvdata, col_poke=CC['NAME'], col_N=CC['NUMBER']):
     '''converts (unique) pokemon to it's pokedex number.'''
-    return csvdata[rows_where(poke,   csvdata, col_poke), col_N][0]
+    rows = rows_where(str(poke),   csvdata, col_poke)
+    return '' if len(rows)==0 else csvdata[rows, col_N][0]
 
 def N_to_poke(N, csvdata, col_poke=CC['NAME'], col_N=CC['NUMBER'], code=None, col_code=CC['CODE']):
     '''converts (non-unique) pokdex number N to the pokemon it represents.
@@ -123,7 +124,8 @@ def N_to_poke(N, csvdata, col_poke=CC['NAME'], col_N=CC['NUMBER'], code=None, co
 
 def poke_to_S(poke, csvdata, col_poke=CC['NAME'], col_S=CC['SERIAL']):
     '''converts pokemon to it's (unique) serial number.'''
-    return csvdata[rows_where(poke,   csvdata, col_poke), col_S][0]
+    rows = rows_where(str(poke),   csvdata, col_poke)
+    return '' if len(rows)==0 else csvdata[rows, col_S][0]
 
 def S_to_poke(S, csvdata, col_poke=CC['NAME'], col_S=CC['SERIAL']):
     '''converts serial number to the (unique) pokemon it represents.'''
@@ -184,6 +186,7 @@ def Ss_to_N(Ss, csvdata, col_N=CC['NUMBER'], col_S=CC['SERIAL']):
 def argsplit(data, val_size=0.2, test_size=0.1):
     '''returns dict with indices for splitting data into train, val, test sets.
     test_size = portion of data for test. val_size = portion of data for validation.
+    even_classes = whether to ensure there are an even number of points from each class.
     '''
     L = len(data)
     Nv = int(val_size * L) if val_size<1.0 else val_size    #number of validation points
@@ -200,7 +203,6 @@ def argsplit(data, val_size=0.2, test_size=0.1):
         print('warning, val_size=0 and test_size=0 --> no splitting was performed.')
         return {'train': data, 'val': [], 'test': []}
     assert False #this line should never be reached - make error if it is reached.
-
     
 ## Data Scaling ##
 def get_scaler(data):
