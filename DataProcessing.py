@@ -229,14 +229,15 @@ class Full_Dataset():
     
     def __init__(self, data, labels, serials=None, val_size=0.2, test_size=0.1, do_scaling=True, verbose=True):
         '''initializes dataset: splits data & labels, and scales based on training data (if do_scaling=True).
+        <Please enter labels and data as numpy arrays.>
         data:    images of pokemon.
         labels:  labels in machine-learning sense. For our work, these should be pokemon types.
         serials: identifiers; for human-readability. Decent naive use-case: serials = pokemon_names.
         '''
-        self.data_input = data  #pointer to original data, in case self.data is scaled or altered.
-        self.data       = data
-        self.labels     = labels
-        self.serials    = serials
+        self.data_input = np.array(data, copy=False)  #pointer to original data, in case self.data is scaled or altered.
+        self.data       = np.array(data, copy=True)   #(could do copy=False to save memory.)
+        self.labels     = np.array(labels, copy=False)
+        self.serials    = np.array(serials, copy=False)
         self.verbose    = verbose
         self.L          = len(data)
         self.val_size   = int(val_size  * self.L) if val_size <1.0 else val_size
