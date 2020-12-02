@@ -47,8 +47,8 @@ ALLTYPES = ALLTYPES + [PADTYPE]
 
 IDXTYPE = {ALLTYPES[i]:i for i in range(len(ALLTYPES))} #dict with keys type, vals idx
 TYPEIDX = {i:ALLTYPES[i] for i in range(len(ALLTYPES))} #dict with keys idx, vals type
-def idx_to_type(indices): return np.vectorize(lambda i: TYPEIDX[i])(indices)   #convert idx to type
-def type_to_idx(types):   return np.vectorize(lambda t: IDXTYPE[t])(types)     #convert type to idx
+def idx_to_type(indices, TYPEIDX=TYPEIDX): return np.vectorize(lambda i: TYPEIDX[i])(indices)   #convert idx to type
+def type_to_idx(types, IDXTYPE=IDXTYPE):   return np.vectorize(lambda t: IDXTYPE[t])(types)     #convert type to idx
 def prediction_to_idx(modelpredict):
     '''convert predictions (shape=(...,NTYPES+1)) to idx for types.'''
     return np.argmax(modelpredict, axis=-1)
