@@ -182,11 +182,10 @@ def Ss_to_N(Ss, csvdata, col_N=CC['NUMBER'], col_S=CC['SERIAL']):
 
 ## Exclude images without pokemon names.
 
-## Data splitting ##
+## Data splitting - split by index alone##
 def argsplit(data, val_size=0.2, test_size=0.1):
     '''returns dict with indices for splitting data into train, val, test sets.
     test_size = portion of data for test. val_size = portion of data for validation.
-    even_classes = whether to ensure there are an even number of points from each class.
     '''
     L = len(data)
     Nv = int(val_size * L) if val_size<1.0 else val_size    #number of validation points
@@ -203,6 +202,36 @@ def argsplit(data, val_size=0.2, test_size=0.1):
         print('warning, val_size=0 and test_size=0 --> no splitting was performed.')
         return {'train': data, 'val': [], 'test': []}
     assert False #this line should never be reached - make error if it is reached.
+    
+def split_from_argsplit(x, asplit, **argsplit_kwargs):
+    '''splits x using asplit, a dict with idx for train, test, val. returns a dict with x[idx] for train, test, val.'''
+    return {key:x[asplit[key]] for key in asplit.keys()}
+
+def argsplit_watch_dups(x, val_size=0.2, test_size=0.1, shuffle=True):
+    '''argsplit(x) while ensuring any duplicates in x stay together.
+    
+    Note: size of each category in result may fluctuate due to duplicates;
+    val_size and test_size are used to calculate number of *unique* elements to include in each category.
+    
+    shuffle: whether to shuffle order of result. Without shuffle, duplicates will stay next to each other in result.
+        e.g. without shuffle: x[result['train']]==[0,9,9,8,2,2,2,7,1,1].
+        with shuffle: list order will be randomized so duplicates aren't necessarily adjacent.
+        
+    try this example to understand more:
+        t = np.append([0,0, 1,1, 2,2,  3, 4,  5,6,7,8,9,  3, 4,  0,1])
+        awd = dp.argsplit_watch_dups(t, 0.25, 0.25, shuffle=True) #or try shuffle=False
+        print(dp.split_from_argsplit(t, awd))        #note that the duplicates always end up in the same set in the result.
+    '''
+    _, unidx, inv = np.unique(x, axis=0, return_index=True, return_inverse=True)
+    invi_to_xi    = {i: [i] for i in unidx}
+    xi_range      = np.arange(len(x))
+    duplicate_xi  = xi_range[~np.isin(xi_range, unidx)]
+    for i in duplicate_xi: invi_to_xi[unidx[inv[i]]] += [i]
+    argsplit_unique_i = argsplit(unidx, val_size=val_size, test_size=test_size)
+    split_unique_i    = split_from_argsplit(unidx, argsplit_unique_i)
+    result = {TTV: [i for uniquei in split_unique_i[TTV] for i in invi_to_xi[uniquei]] for TTV in argsplit_unique_i.keys()}
+    if shuffle: result = {key: np.random.permutation(val) for key,val in result.items()}
+    return result
     
 ## Data Scaling ##
 def get_scaler(data):
@@ -227,12 +256,27 @@ def scaled_datasets(dd):
 class Full_Dataset():
     '''class for storing data easily, and automatically doing a bunch of preprocessing.'''
     
-    def __init__(self, data, labels, serials=None, val_size=0.2, test_size=0.1, do_scaling=True, verbose=True):
+    def __init__(self, data, labels, serials=None, val_size=0.2, test_size=0.1, do_scaling=True, verbose=True,
+                 watch_dups=True, shuffle=True):
         '''initializes dataset: splits data & labels, and scales based on training data (if do_scaling=True).
         <Please enter labels and data as numpy arrays.>
         data:    images of pokemon.
         labels:  labels in machine-learning sense. For our work, these should be pokemon types.
         serials: identifiers; for human-readability. Decent naive use-case: serials = pokemon_names.
+        
+        do_scaling: whether to do feature-wise scaling of data.
+        verbose:    whether to print info during calculations.
+        
+        watch_dups: True, False, int, or array with length==len(data); default True
+            whether to ensure "duplicates" are kept in the same category while argsplit happens.
+            e.g. if we have two images of 'ditto', should we ensure they stay in the same category (train/val/test)?
+            False ----------> do not care whether duplicates stay in the same category; just do a simple argsplit.
+            True/int/array -> ensure duplicates stay in same category.
+                "Duplicates" determined by:
+                True --> serials.          (If serials is None in this case, watch_dups will be set to False.)
+                int ---> serials[:, watch_dups ]. 
+                array -> watch_dups.
+        shuffle: True or False; default True; see shuffle kwarg in argsplit_watch_dups.
         '''
         self.data_input = np.array(data, copy=False)  #pointer to original data, in case self.data is scaled or altered.
         self.data       = np.array(data, copy=True)   #(could do copy=False to save memory.)
@@ -243,7 +287,31 @@ class Full_Dataset():
         self.val_size   = int(val_size  * self.L) if val_size <1.0 else val_size
         self.test_size  = int(test_size * self.L) if test_size<1.0 else test_size
         self.train_size = self.L - self.val_size - self.test_size
-        self.argsplit   = argsplit(data, val_size=val_size, test_size=test_size)
+        
+        ## do argsplit: ##
+        if (watch_dups is False) or (watch_dups is True and serials is None):
+            if verbose: print('|> Splitting data with simple argsplit (not checking for duplicates).')
+                
+            self.argsplit   = argsplit(data, val_size=val_size, test_size=test_size)
+            
+        else:
+            dupdstr = '|> "Duplicates" determined by whether '
+            if verbose: print('|> Splitting data; ensuring duplicates stay together.')
+            if watch_dups is True:
+                self.dup_watcher = self.serials
+                assert len(serials)==self.L
+                if verbose: print(dupdstr + 'serials match. Example:', self.serials[0])
+            elif type(watch_dups==int):
+                self.dup_watcher = self.serials[:,watch_dups]
+                assert len(serials)==self.L
+                if verbose: print(dupdstr + 'serials[:,{:d}] match. Example:'.format(watch_dups), self.serials[0])
+            else:
+                self.dup_watcher = watch_dups
+                assert len(watch_dups)==len(data)
+                if verbose: print(dupdstr + 'watch_dups elements match. Example:', watch_dups[0])
+                    
+            self.argsplit = argsplit_watch_dups(self.dup_watcher, val_size=val_size, test_size=test_size, shuffle=shuffle)
+            
         self._argsplit_attr('data')   #makes self.train_data, self.val_data, self.test_data.
         self._argsplit_attr('labels') #similarly but for labels.
         self._argsplit_attr('serials')#similarly but for serials.
