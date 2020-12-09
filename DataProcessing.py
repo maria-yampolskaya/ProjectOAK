@@ -300,15 +300,15 @@ class Full_Dataset():
             if watch_dups is True:
                 self.dup_watcher = self.serials
                 assert len(serials)==self.L
-                if verbose: print(dupdstr + 'serials match. Example:', self.serials[0])
+                if verbose: print(dupdstr + 'serials match. E.g. serial[0] =', self.serials[0])
             elif type(watch_dups==int):
                 self.dup_watcher = self.serials[:,watch_dups]
                 assert len(serials)==self.L
-                if verbose: print(dupdstr + 'serials[:,{:d}] match. Example:'.format(watch_dups), self.serials[0])
+                if verbose: print(dupdstr + 'serials[:,{0:d}] match. E.g. serial[0,{0:d}] ='.format(watch_dups), self.serials[0])
             else:
                 self.dup_watcher = watch_dups
                 assert len(watch_dups)==len(data)
-                if verbose: print(dupdstr + 'watch_dups elements match. Example:', watch_dups[0])
+                if verbose: print(dupdstr + 'watch_dups elements match. E.g. watch_dups[0] =', watch_dups[0])
                     
             self.argsplit = argsplit_watch_dups(self.dup_watcher, val_size=val_size, test_size=test_size, shuffle=shuffle)
             
