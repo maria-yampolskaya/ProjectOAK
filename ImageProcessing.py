@@ -147,4 +147,21 @@ def array_to_PIL(i):
     '''convert i to PIL Image.'''
     return PIL.Image.fromarray(np.uint8(rescaled(i, [0,255])))
 
+def resize_image(i, shape, force_apply=False):
+    '''resize image i so each channel has shape shape (e.g. shape=(120,120)). returns numpy array.'''
+    return   i   if  (i.shape[:2]==shape or shape is None)  else   np.array(array_to_PIL(i).resize(shape))
+
+def resize_images(ims, shape, verbose=True):
+    '''resize ims (numpy array of images) so each channel of each image has shape shape. (e.g. shape=(120,120))
+    returns numpy array with all the resized images; it's shape will be (Nimgs, shape[0], shape[1], Nchannels).
+    '''
+    if ims[0].shape[:2]==shape or shape is None:
+        if verbose: print('(No resizing necessary; image shape is already the desired shape.)')
+        return ims
+    else:
+        if verbose: now = time.time()
+        result = np.array([resize_image(i, shape) for i in ims])  #the actual work of the function is here.
+        if verbose: print('Took {:5.2f} seconds to resize images'.format(time.time()-now))
+    return result
+
 #PIL.Image.fromarray(np.uint8(ip.rescaled(im, [0,255]))).resize((256, 256))
