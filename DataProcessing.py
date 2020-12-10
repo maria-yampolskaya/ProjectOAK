@@ -35,6 +35,7 @@ IMAGESFOLDER1  = 'dataset/images/images'
 IMAGESFOLDER1J = 'dataset/images/image_jpgs' #folder where images from jpg-converted dataset are stored.
 IMAGESFOLDER2  = 'dataset/images/archive/pokemon/pokemon'
 IMAGESFOLDER2J = 'dataset/images/archive/pokemon_jpg/pokemon_jpg'
+IMAGESFOLDER3  = 'dataset/images/dataset150/' #folder containing [(folder with many images of poke) for poke in original 150 pokes]
 
 #edit default file locations here: default CSV; default images folder.
 CSVFILE      = CSVFILE2  #default CSV file
