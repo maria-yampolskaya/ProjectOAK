@@ -36,6 +36,8 @@ IMAGESFOLDER1J = 'dataset/images/image_jpgs' #folder where images from jpg-conve
 IMAGESFOLDER2  = 'dataset/images/archive/pokemon/pokemon'
 IMAGESFOLDER2J = 'dataset/images/archive/pokemon_jpg/pokemon_jpg'
 IMAGESFOLDER3  = 'dataset/images/dataset150/' #folder containing [(folder with many images of poke) for poke in original 150 pokes]
+IMAGESFOLDER4  = 'dataset/scraped' #folder containing [(folder with many images from bulbapedia of poke) for poke in pokes] 
+IMAGESFOLDER4C = 'dataset/scraped_cleaned_200' #likst IMAGESFOLDER4 but with bad images culled and all images resized to 200x200.
 
 #edit default file locations here: default CSV; default images folder.
 CSVFILE      = CSVFILE2  #default CSV file
@@ -57,7 +59,9 @@ def prediction_to_idx(modelpredict):
 
 ## read csv ##
 def read_csv(csvfilename=CSVFILE, return_indexer=True):
-    '''return data from csv file. return [data_without_headings, indexer] if return_indexer, else all_data.'''
+    '''return data from csv file. return [data_without_headings, indexer] if return_indexer, else return all_data.
+    suggested use: csvdata, cc = dp.read_csv(dp.CSVFILE2)
+    '''
     now = time.time()
     with open(csvfilename) as csvfileobj:
         csvreader = csv.reader(csvfileobj)
@@ -98,12 +102,19 @@ CC = _headers(_read_csv_header(CSVFILE)[np.newaxis,:])
 _set_CC_keys = ['NAME', 'NUMBER', 'CODE', 'SERIAL'] #ensure these keys exist so that functions are well-defined.
 for key in _set_CC_keys:
     CC[key] = CC[key] if (key in CC.keys()) else None
-
     
 ## convert between attributes: ##
 def rows_where(val, csvdata, col_val=None):
     '''returns csvdata for the row(s) where csvdata[:,col_val]==val.'''
     return np.where(csvdata[:,col_val]==val)[0]
+
+def pokerows(csvdata):
+    '''returns boolean array for indexing all the pokemon'.
+    pokerows    = csvdata[:,cc.CODE]=='1'
+    POKENAMES   = csvdata[:,cc.NAME][pokerows]
+    POKENUMBERS = csvdata[:,cc.NUMBER][pokerows]
+    '''
+    return csvdata[:,cc.CODE]=='1'
 
 def poke_to_N(poke, csvdata, col_poke=CC['NAME'], col_N=CC['NUMBER']):
     '''converts (unique) pokemon to it's pokedex number.'''
@@ -280,7 +291,7 @@ class Full_Dataset():
         shuffle: True or False; default True; see shuffle kwarg in argsplit_watch_dups.
         '''
         self.data_input = np.array(data, copy=False)  #pointer to original data, in case self.data is scaled or altered.
-        self.data       = np.array(data, copy=True)   #(could do copy=False to save memory.)
+        self.data       = np.array(data, copy=False)   #(could do copy=False to save memory.)
         self.labels     = np.array(labels, copy=False)
         self.serials    = np.array(serials, copy=False)
         self.verbose    = verbose
@@ -339,4 +350,5 @@ class Full_Dataset():
         self.val_data   = scale_images(self.val_data, self.scaler)
         self.test_data  = scale_images(self.test_data, self.scaler)
         print('Took {:5.2f} seconds to scale data'.format(time.time()-now))
+
 
