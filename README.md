@@ -12,7 +12,14 @@ A folder containing the two initial attempts at applying machine learning to the
 ## dataset
 A folder containing the Pokémon images, as well as a "Pokédex" file containing information on all Pokémon. 
 
-Data sources: [120x120 images of 809 Pokémon](https://www.kaggle.com/vishalsubbiah/pokemon-images-and-types), [256x256 images of 819 Pokémon](https://www.kaggle.com/kvpratama/pokemon-images-dataset), [variously-sized images of 150 Pokémon](https://www.kaggle.com/thedagger/pokemon-generation-one), [Pokédex csv](https://www.kaggle.com/takamasakato/pokemon-all-status-data).
+Main Data sources:
+ - [(5000+) 200x200 images of ~898 Pokémon](https://www.kaggle.com/sevans7/pokemon-images-scraped-from-bulbapedia), created (scraped from Bulbapedia & cleaned) by me! -Sam
+ - [Pokédex csv](https://www.kaggle.com/takamasakato/pokemon-all-status-data). 
+ 
+Initial Data sources / other Data sources:
+ - [120x120 images of 809 Pokémon](https://www.kaggle.com/vishalsubbiah/pokemon-images-and-types)
+ - [256x256 images of 819 Pokémon](https://www.kaggle.com/kvpratama/pokemon-images-dataset)
+ - [variously-sized images of 150 Pokémon](https://www.kaggle.com/thedagger/pokemon-generation-one), 
 ## ClassifierChainExample
 The code for a custom Keras neural net structure: classifier chains.
 ## DataProcessing
