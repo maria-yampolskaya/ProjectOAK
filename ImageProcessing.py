@@ -89,9 +89,18 @@ def show_rgb(imgdata, figsize=(10,2), pad=0.1):
 
 
 ### Put images into dict with pokemon names as keys! ###
+def take_ext(s):
+    '''takes extension from s. e.g. s='test.png' -> return ['test', 'png']'''
+    try:
+        Iext = -(s[::-1].index('.')+1)
+        return s[:Iext], s[Iext+1:]
+    except:
+        print("didn't find '.' in s=",s)
+        raise
+
 def get_image_and_poke(filename, folder=dp.IMAGESFOLDER, verbose=True):
     '''returns [imagedata, pokemonname]. e.g. filename='squirtle.png' -> returns [image, 'squirtle'].'''
-    name, ext = filename.split('.')
+    name, ext = take_ext(filename)
     ext = '.' + ext
     try:
         return [get_image(name, folder=folder, ext=ext), name]
@@ -179,63 +188,114 @@ def resize_images(ims, shape, verbose=True):
 # images are in folders which are named by pokemon names. E.g. ./Abra/ has many pictures of abra.
         
 def get_some_images_and_reshape(folder, some=50, shape=(240, 240), imnames=None,
+                                exclude_smaller=False,
                                 verbose=True, printfreq=5,                       #printfreq in seconds
-                                random=True, to_rgb=True):
+                                random=False, to_rgb=True,
+                                return_filesread=False, return_exclusion_info=False):
     '''returns np.array of some images from folder.
-    some = max number of images to get from folder.
-    shape = shape to make image channels.
-    imnames = image names to use (will os.listdir(folder) if imnames is None).
-    verbose = whether to print when there are errors with image reading.
-    printfreq = amount of time (in seconds) between progress updates.
-    random = whether to choose images randomly (if False, read them in order).
-    to_rgb = whether to output images in rgb. (to_rgb=False is not implemented yet.)
+    some                  = max number of images to get from folder.
+    shape                 = shape to make image channels.
+    exclude_smaller       = whether to exclude images whose channels are initially smaller than shape.
+    imnames               = image names to use (will os.listdir(folder) if imnames is None).
+    verbose               = whether to print when there are errors with image reading.
+        verbose goes up to 3, with 2 & 3 --> info about which images are being excluded & why.
+    printfreq             = amount of time (in seconds) between progress updates.
+    random                = whether to choose images randomly (if False, read them in order).
+    to_rgb                = whether to output images in rgb. (to_rgb=False is not implemented yet.)
+    return_filesread      = whether to also return the filenames of those images which were successfully read.
+    return_exclusion_info = whether to return additionally a dict with info about which images were excluded.
     '''
     now=time.time()
-    allimagenames = imnames if imnames is not None else os.listdir(folder)
-    if random: allimagenames = np.random.permutation(allimagenames)
-    #should include some line which skips non-images here. (not needed for this data though.)
-    to_rgb_fn =  img_to_rgb   if   to_rgb   else  lambda x: x
+    filenames = imnames if imnames is not None else os.listdir(folder)   #get image names.
+    if random: filenames = np.random.permutation(filenames)          #permute names if random is True.
+    to_rgb_fn  =  img_to_rgb   if   to_rgb   else  lambda x: x               #define to_rgb function if to_rgb is True.
+    min_imsize =  0 if not exclude_smaller else shape[0]*shape[1]            #minimum size of image; 0 if not exclude_smaller.
+    
+    exclude_reasons = {0:'failed get_image_and_poke', 1:'not enough channels', 2:'too small'}
+    excluded = {0:0, 1:0, 2:0, 'filenames':[], 'reasons':[]}                 #tracks reasons for images being excluded & which are excluded.
+    def update_excluded(excluded, reason, filename):
+        excluded[reason]     +=1
+        excluded['filenames']+=[filename]
+        excluded['reasons']  +=[reason]
     
     ## begin main loop for function ##
     printtime = now + printfreq
     imagelist = []
+    filesread = []   #track which files were successfully added to imagelist, in case return_filenames is True.
     i = 0
-    while len(imagelist)<some and i<len(allimagenames):
+    while len(imagelist)<some and i<len(filenames):
         if time.time() > printtime:
             print('.. getting image {:2d}.'.format(i), end='')
             printtime += printfreq
-        gip = get_image_and_poke(allimagenames[i], folder=folder, verbose=verbose)
+            
+        gip = get_image_and_poke(filenames[i], folder=folder, verbose=verbose)
         if gip is not None:
-            if len(gip[0].shape)==3:     #check to ensure image has channels (for some reason some dont have channels).
-                imagelist += [resize_image(to_rgb_fn(gip[0]), shape)]
+            if len(gip[0].shape) == 3:     #check to ensure image has channels (for some reason some dont have channels).
+                if (gip[0].shape[0] * gip[0].shape[1]) >= min_imsize:
+                    imagelist += [resize_image(to_rgb_fn(gip[0]), shape)]
+                    filesread += [filenames[i]]
+                else: update_excluded(excluded, 2, filenames[i])
+            else: update_excluded(excluded, 1, filenames[i])
+        else: update_excluded(excluded, 0, filenames[i])
+            
         i += 1
     allimages = np.array(imagelist)
     ## end main loop for function ##
     
-    if verbose: print('Got {:3d} of the {:3d} images in {:5.2f} seconds (from folder = {:s}).'.format(
-                        len(imagelist), len(allimagenames), time.time()-now, folder))
-    return allimages
+    if verbose:
+        print('Got {:3d} of the {:3d} images in {:5.2f} seconds (from folder = {:s}).'.format(
+                len(imagelist), len(filenames), time.time()-now, folder))
+        if len(imagelist) < len(filenames):
+            print('(Some images were excluded. More info via verbose>1, return_filesread=True, or return_exclusion_info=True.)')
+    
+    if excluded[0]+excluded[1]+excluded[2] > 0:
+        if verbose == 2: print(' >> Excluded images:',excluded['filenames'])
+        if verbose  > 2:
+            print(' >> List of excluded files and reasons for exclusion:')
+            for i in range(len(excluded['filenames'])):
+                print('{:>26s} | {:s}'.format(exclude_reasons[excluded['reasons'][i]], excluded['filenames'][i]))
+    
+    ## decide which things to return, based on optional parameters. (usually, just return allimages.) ##
+    returns = [allimages]
+    if return_filesread:      returns += [filesread]
+    if return_exclusion_info: returns += [excluded]
+    
+    return returns if len(returns)>1 else returns[0]
 
 def _print_clear(N=80):
     '''clears current printed line of up to N characters, and returns cursor to beginning of the line.
     debugging: make sure to use print(..., end=''), else your print statement will go to the next line.
     '''
-    print('\r'+' '*80+'\r',end='')
+    print('\r'+' '*N+'\r',end='')
 
-def images_from_folders_in_dir(directory, Nf=None, **kwargs):
+def images_from_folders_in_dir(directory, Nf=None, nameslists=None, **kwargs):
     '''returns dict of images from folders in directory, with keys=folder names.
     Nf = max number of folders to get images from. Mainly useful when debugging.
+    nameslists = optional argument for more control over which images are actually read.
+        suggested use: in conjunction with ScrapedLoading.py & scraped data (dataset 4).
+        instead of seeking all files in directory, will read files:
+        [os.path.join(os.path.join(directory, folder), file) for folder in nameslists.keys() for file in folder.get_files()]
     **kwargs: get passed to get_some_images_and_reshape. see that function for more info.
     '''
     now=time.time()
     some = kwargs.pop('some', 10)
     verbose = kwargs.pop('verbose', False)
-    print('Loading up to {:2d} images from each folder. Set kwarg "some" to another value to change this number.'.format(some))
-    folders = sorted([folder for folder in os.listdir(directory) if os.path.isdir(os.path.join(directory, folder))])
+    if some < np.inf:
+        print('Loading up to {:} images from each folder. Set kwarg "some" to another value to change this number.'.format(some))
+    if nameslists is None:
+        listdir = os.listdir(directory)
+        folders = sorted([folder for folder in     listdir       if os.path.isdir(os.path.join(directory, folder))])
+        imnames = [None for folder in listdir]
+    else:
+        folders = sorted([folder for folder in nameslists.keys() if os.path.isdir(os.path.join(directory, folder))])
+        imnames = [nameslists[folder].get_files() for folder in folders]
+
+    ## start loop of reading images.
     result = dict()
-    for folder in folders[:Nf]:
+    for i in range(len(folders[:Nf])):
+        folder, imns = folders[:Nf][i], imnames[i]
         print('Current folder:',folder, end='')
-        result[folder] = get_some_images_and_reshape(os.path.join(directory, folder), some=some, verbose=verbose, **kwargs)
+        result[folder] = get_some_images_and_reshape(os.path.join(directory, folder), some=some, verbose=verbose, imnames=imns, **kwargs)
         _print_clear(N=30)
     print('Finished in {:5.2f} seconds.'.format(time.time()-now))
     return result
