@@ -194,7 +194,7 @@ def Ss_to_N(Ss, csvdata, col_N=CC['NUMBER'], col_S=CC['SERIAL']):
 
 def pokes_to_rows(pokes, csvdata):
     '''return [idx of row where NAME=poke, for poke in pokes]'''
-    return vectorized_row_where(pokes)
+    return vectorized_row_where(pokes, csvdata)
 
 
 ## Exclude images without pokemon names.
