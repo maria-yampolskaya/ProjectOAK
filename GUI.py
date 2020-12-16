@@ -32,7 +32,7 @@ POKENUMBERS = csvdata[:,cc.NUMBER][pokerows]
 def poke_to_row(poke):
     return np.where(POKENAMES==poke)[0][0]
 
-def save_results(results, name='untitled', direc='GUI_results'):
+def save_results(results, name='untitled.txt', direc='GUI_results'):
     n = 0
     def saveloc(n): return os.path.join(direc, str(n).zfill(3)+'-'+name)
     while os.path.exists(saveloc(n)):
@@ -93,14 +93,28 @@ def create_and_save_barh(corrs, saveloc='GUI_results/active_bar_plot.png'):
     plt.close()
     return saveloc
 
+def get_random_im_and_update(sgimage, i=None, **kwargs):
+    '''gets image and updates sgimage object (--> updates image on screen).'''
+    c = 0 if i is None else 20  #if i is entered, only try to get the image once.
+    updated = False
+    while c<=20 and not updated:
+        try:
+            im, poke = random_imgfile(i=i, **kwargs)
+            sgimage.update(im)
+            updated = True
+        except:
+            c+=1
+            print('Failed to show image:', imgfile)
+    return [im, poke]
+
 def random_imgfile(i=None, fnames=fnames, direc=direc):
     '''return imgfile, pokename'''
     i = i if i is not None else np.random.randint(len(fnames))
-    imgfile = os.path.join(direc, fnames[i])
-    return [imgfile, pokename(imgfile)]
+    imfile = os.path.join(direc, fnames[i])
+    return [imfile, pokename(imfile)]
 
-def pokename(imgfile):
-    return os.path.split(os.path.split(imgfile)[0])[1]
+def pokename(imfile):
+    return os.path.split(os.path.split(imfile)[0])[1]
 
 def selection(x={'p':None, 's':None}):
     return 'Selected: ' + (', '.join([x[k] for k in ['p','s'] if x[k] is not None]))
@@ -198,7 +212,7 @@ def update_seen(event):
         return 0
     elif event == '-SEEN_MAYBE-':
         seen_maybe.update(**on)
-        seen = 2
+        return 2   #NOTE: previously returned None.
           
 # Create the window
 window = sg.Window("Type Quiz!", layout, finalize=True) 
@@ -244,14 +258,13 @@ try:
                 update_typebuttons(typebuttons, x)
                 seen = -1
                 seen_reset()
-                im, poke = random_imgfile()
+                im, poke = get_random_im_and_update(img)
         elif event == '-PLOT-':
             make_barh(corrs, xlim_max)
             plt.show(block=False)
         elif event == sg.WIN_CLOSED:
             break
         
-        img.update(im)
         selected.update(selection(x))
 except:
     print('There was an error raised! Saving data then raising again.')
