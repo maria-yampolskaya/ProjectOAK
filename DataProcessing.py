@@ -60,7 +60,8 @@ def prediction_to_idx(modelpredict):
 ## read csv ##
 def read_csv(csvfilename=CSVFILE, return_indexer=True):
     '''return data from csv file. return [data_without_headings, indexer] if return_indexer, else return all_data.
-    suggested use: csvdata, cc = dp.read_csv(dp.CSVFILE2)
+    suggested use:
+        csvdata, cc = dp.read_csv(dp.CSVFILE2)
     '''
     now = time.time()
     with open(csvfilename) as csvfileobj:
@@ -190,6 +191,10 @@ def Ns_to_S(Ns, csvdata, col_S=CC['SERIAL'], col_N=CC['NUMBER'], code=None, col_
 def Ss_to_N(Ss, csvdata, col_N=CC['NUMBER'], col_S=CC['SERIAL']):
     '''converts list of Ss to list of Ns.'''
     return [S_to_N(S, csvdata, col_N, col_S) for S in Ss]
+
+def pokes_to_rows(pokes, csvdata):
+    '''return [idx of row where NAME=poke, for poke in pokes]'''
+    return vectorized_row_where(pokes)
 
 
 ## Exclude images without pokemon names.
