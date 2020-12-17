@@ -9,6 +9,10 @@ File purpose:
     Methods to evaluate predictions.
     Especially concerned with: developing accuracy metrics.
     
+    This file is mostly obsolete once you understand what the similar keras metrics do.
+    However, those metrics are confusing and don't do exaclty what you might think sometimes.
+    So this file is a good way to compare and test and check if they are doing what you think they are doing.
+    
 Example usage:
     import AccuracyMetrics as am
     y_true = ( true Nhot labels )
@@ -59,9 +63,11 @@ def classify_guess(truth, guess, N=None):
     Allows for mismatched location. E.g. the example above has one true positive.
     N = total number of types. If N=None, TN will be None.
     returns dict with keys TN, TP, FN, FP.'''
-    TP = int(guess[0] in truth) + int(guess[1] in truth and guess[1] != '')
+    TP = int(guess[0] in truth) \
+        + int(guess[1] in truth and guess[1] != '')
     FN = int(  (guess[1] == '') and (truth[1] != '')  )
-    FP = int(  (truth[1] == '') and (guess[1] != '')  )
+    FP = int(guess[0] not in truth) \
+        + int((guess[1] not in truth) and guess[1]!='')
     TN = None if N is None else N - (TP + FN + FP)
     return dict(TP=TP, TN=TN, FP=FP, FN=FN)
 
@@ -82,8 +88,8 @@ def classify_Nhot(Nhot_true, Nhot_pred):
     Nneg = L - Npos
     TP = np.count_nonzero(p[t])
     TN = np.count_nonzero(~p[~t])
-    FP = Npos - TP
-    FN = Nneg - TN
+    FN = Npos - TP
+    FP = Nneg - TN
     return dict(TP=TP, TN=TN, FP=FP, FN=FN)
 
 def classify_Nhots(Nhots_true, Nhots_pred):
