@@ -2,8 +2,24 @@
 # -*- coding: utf-8 -*-
 """
 FILE PURPOSE:
-    In this file is code which implements a simple modified classifier chain in keras.
+    In this file is code which implements a classifier chains in keras.
     Use it to get started with keras functional API, and/or to use classifier chains.
+    The first example in this file is a simple modified classifier chain.
+        It does not contain a separate CNN for each classifier.
+    The second example in this file is more of a "classic" classifier chain..
+        It contains a separate CNN for each classifier.
+    
+    The classifier chains code is kept here instead of in a notebook, because
+    the classifier chains seemed to be performing poorly, overall.
+    Because of this initial poor performance, combined with a time limit for the project,
+    we did not continue looking into classifier chains for too long.
+    We have not done enough tests with changing parameters to give up on classifier chains
+    permanently, so we keep their code in this .py file.
+    
+HOW TO USE THE CODE:
+    The easiest way to use this will be to replace the create_CNN() function
+    in one of the ipynb notebook files and use the classifier_chain() function
+    instead, to set the model. This step should be enough to test the classifier chains!
 
 CLASSIFIER CHAINS:
     This method for multi-label classification allows for correlation between labels.
@@ -49,7 +65,11 @@ from tensorflow.keras import layers, models
 
 ## set parameters by hand: ##
 IMAGESHAPE=(256, 256, 3)
-Ntypes = 8                               #18 for types; 8 for Sam's metatypes  
+Ntypes = 8                               #18 for types; 8 for Sam's metatypes 
+
+
+################ CLASSIFIER CHAIN EXAMPLE 1: A MODIFIED CHAIN ################
+ 
 Ndense = [5 for i in range(Ntypes)]      #could choose custom Ndense here.
 
 ## define functions ##
@@ -65,8 +85,6 @@ def initial_layers(name='CNN'):
     _x = layers.Flatten()(_x)
     model = tf.keras.Model(inputs=inputs, outputs=_x, name=name)
     return model
-
-
 
 def _lname(N, name): return str(N) + '-' + name    #function for naming layers nice things
 
@@ -115,7 +133,7 @@ mm.compile(optimizer=tf.keras.optimizers.SGD(),
 ## outputs: ##
 """
 We can check the classifier_label_order via print('clo=',clo):
->> array([2, 5, 0, 3, 4, 6, 7, 1])
+>> clo= array([2, 5, 0, 3, 4, 6, 7, 1])
 
 We can check the model structure via mm.summary():
 >>
@@ -220,3 +238,147 @@ We can fit and make predictions just like any other model, via mm.fit() and mm.p
 
 Enjoy :) 
 """
+
+################ CLASSIFIER CHAIN EXAMPLE 2: A FULL CHAIN OF CNNs ################
+
+def _lname(N, name, N2=''): return str(N) + '_' + name + ('-' + str(N2) if N2 != '' else '')   #function for naming layers nice things
+
+def input_layer(name='images_input'):
+    return tf.keras.Input(shape=IMAGESHAPE, name=name)
+
+def mini_cnn(inputs, parms=None, Ndense=1, name='unnamed_CNN'):
+    _x = layers.Conv2D(6, 3, 1, input_shape=IMAGESHAPE, activation='relu')(inputs)
+    _x = layers.AveragePooling2D(pool_size = (2,2))(_x)
+    _x = layers.Flatten()(_x)
+    outputs = layers.Dense(Ndense, activation='sigmoid')(_x)
+    return tf.keras.Model(inputs=inputs, outputs=outputs, name=name)
+    
+def classifier_chain(Ntypes=Ntypes, classifier_label_order=None, name='CC'):
+    
+    clo = classifier_label_order
+    clo = clo if clo is not None else np.random.permutation(Ntypes)
+    
+    inputs = input_layer()
+    cc = [] #list of classifiers
+    
+    #classifier for class 0:
+    _x  = mini_cnn(inputs, name=_lname(0, 'CNN'))(inputs)
+    c0  = layers.Dense(1, activation='sigmoid', name=_lname(0, 'Classify', clo[0]))(_x)
+    cc += [c0]
+    
+    for i in range(1, Ntypes):
+        #classifier for class i:
+        _x = mini_cnn(inputs, name=_lname(i, 'CNN'))(inputs)
+        _x = layers.concatenate([*cc, _x], name=_lname(i, 'Concat'))
+        ci = layers.Dense(1, activation='sigmoid', name=_lname(i, 'Classify', clo[i]))(_x)
+        cc += [ci]
+        
+    #outputs:
+    outputs = layers.concatenate([cc[i] for i in clo], name='CLO')
+    
+    model = tf.keras.Model(inputs=inputs, outputs=outputs, name=name)
+    return model, clo
+
+## make model ##
+mm, clo = classifier_chain()
+
+## outputs: ##
+"""
+We can check the classifier_label_order via print('clo=',clo):
+>> clo= array([2, 5, 0, 3, 4, 6, 7, 1])
+
+We can check the model structure via mm.summary():
+>>
+Model: "CC"
+__________________________________________________________________________________________________
+Layer (type)                    Output Shape         Param #     Connected to                     
+==================================================================================================
+images_input (InputLayer)       [(None, 200, 200, 3) 0                                            
+__________________________________________________________________________________________________
+0_CNN (Functional)              (None, 1)            58975       images_input[0][0]               
+__________________________________________________________________________________________________
+0_Classify-5 (Dense)            (None, 1)            2           0_CNN[0][0]                      
+__________________________________________________________________________________________________
+1_CNN (Functional)              (None, 1)            58975       images_input[0][0]               
+__________________________________________________________________________________________________
+1_Concat (Concatenate)          (None, 2)            0           0_Classify-5[0][0]               
+                                                                 1_CNN[0][0]                      
+__________________________________________________________________________________________________
+1_Classify-4 (Dense)            (None, 1)            3           1_Concat[0][0]                   
+__________________________________________________________________________________________________
+2_CNN (Functional)              (None, 1)            58975       images_input[0][0]               
+__________________________________________________________________________________________________
+2_Concat (Concatenate)          (None, 3)            0           0_Classify-5[0][0]               
+                                                                 1_Classify-4[0][0]               
+                                                                 2_CNN[0][0]                      
+__________________________________________________________________________________________________
+2_Classify-7 (Dense)            (None, 1)            4           2_Concat[0][0]                   
+__________________________________________________________________________________________________
+3_CNN (Functional)              (None, 1)            58975       images_input[0][0]               
+__________________________________________________________________________________________________
+3_Concat (Concatenate)          (None, 4)            0           0_Classify-5[0][0]               
+                                                                 1_Classify-4[0][0]               
+                                                                 2_Classify-7[0][0]               
+                                                                 3_CNN[0][0]                      
+__________________________________________________________________________________________________
+3_Classify-2 (Dense)            (None, 1)            5           3_Concat[0][0]                   
+__________________________________________________________________________________________________
+4_CNN (Functional)              (None, 1)            58975       images_input[0][0]               
+__________________________________________________________________________________________________
+4_Concat (Concatenate)          (None, 5)            0           0_Classify-5[0][0]               
+                                                                 1_Classify-4[0][0]               
+                                                                 2_Classify-7[0][0]               
+                                                                 3_Classify-2[0][0]               
+                                                                 4_CNN[0][0]                      
+__________________________________________________________________________________________________
+4_Classify-1 (Dense)            (None, 1)            6           4_Concat[0][0]                   
+__________________________________________________________________________________________________
+5_CNN (Functional)              (None, 1)            58975       images_input[0][0]               
+__________________________________________________________________________________________________
+5_Concat (Concatenate)          (None, 6)            0           0_Classify-5[0][0]               
+                                                                 1_Classify-4[0][0]               
+                                                                 2_Classify-7[0][0]               
+                                                                 3_Classify-2[0][0]               
+                                                                 4_Classify-1[0][0]               
+                                                                 5_CNN[0][0]                      
+__________________________________________________________________________________________________
+5_Classify-3 (Dense)            (None, 1)            7           5_Concat[0][0]                   
+__________________________________________________________________________________________________
+6_CNN (Functional)              (None, 1)            58975       images_input[0][0]               
+__________________________________________________________________________________________________
+6_Concat (Concatenate)          (None, 7)            0           0_Classify-5[0][0]               
+                                                                 1_Classify-4[0][0]               
+                                                                 2_Classify-7[0][0]               
+                                                                 3_Classify-2[0][0]               
+                                                                 4_Classify-1[0][0]               
+                                                                 5_Classify-3[0][0]               
+                                                                 6_CNN[0][0]                      
+__________________________________________________________________________________________________
+6_Classify-0 (Dense)            (None, 1)            8           6_Concat[0][0]                   
+__________________________________________________________________________________________________
+7_CNN (Functional)              (None, 1)            58975       images_input[0][0]               
+__________________________________________________________________________________________________
+7_Concat (Concatenate)          (None, 8)            0           0_Classify-5[0][0]               
+                                                                 1_Classify-4[0][0]               
+                                                                 2_Classify-7[0][0]               
+                                                                 3_Classify-2[0][0]               
+                                                                 4_Classify-1[0][0]               
+                                                                 5_Classify-3[0][0]               
+                                                                 6_Classify-0[0][0]               
+                                                                 7_CNN[0][0]                      
+__________________________________________________________________________________________________
+7_Classify-6 (Dense)            (None, 1)            9           7_Concat[0][0]                   
+__________________________________________________________________________________________________
+CLO (Concatenate)               (None, 8)            0           5_Classify-3[0][0]               
+                                                                 4_Classify-1[0][0]               
+                                                                 7_Classify-6[0][0]               
+                                                                 2_Classify-7[0][0]               
+                                                                 1_Classify-4[0][0]               
+                                                                 3_Classify-2[0][0]               
+                                                                 0_Classify-5[0][0]               
+                                                                 6_Classify-0[0][0]               
+==================================================================================================
+Total params: 471,844
+Trainable params: 471,844
+Non-trainable params: 0
+__________________________________________________________________________________________________
